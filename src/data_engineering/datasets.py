@@ -4,7 +4,7 @@ import pandas as pd
 
 
 class DatasetLocal:
-    BASE_FOLDER = Path(__file__).resolve().parent.parent / "data"
+    BASE_FOLDER = Path(__file__).resolve().parent.parent.parent / "data"
 
     def __init__(self, name):
         self.name = name

@@ -147,7 +147,7 @@ class TelemetryCarData(DatasetLocal):
         if len(ls) == 0:
             return None
         df = pd.concat(ls)
-        idx = ["Year", "SessionId", "Time"]
+        idx = ["Year", "SessionId", "Date"]
         other = [c for c in df.columns if c not in idx]
         df = df.sort_values(by=idx)[idx + other].reset_index(drop=True)
         return df
@@ -162,26 +162,6 @@ class TelemetryPosData(DatasetLocal):
     def run(self):
         dataset_bronze = DatasetLocal(
             name="bronze/telemetry_pos_Y{:04d}{:s}*".format(self.year, self.round_id)
-        )
-        ls = list(dataset_bronze.read_with_pattern())
-        if len(ls) == 0:
-            return None
-        df = pd.concat(ls)
-        idx = ["Year", "SessionId", "Date"]
-        other = [c for c in df.columns if c not in idx]
-        df = df.sort_values(by=idx)[idx + other].reset_index(drop=True)
-        return df
-
-
-class TelemetryCarData(DatasetLocal):
-    def __init__(self, year, round_id):
-        self.year = year
-        self.round_id = round_id
-        self.name = "silver/telemetry_car_data_Y{:04d}{:s}".format(year, round_id)
-
-    def run(self):
-        dataset_bronze = DatasetLocal(
-            name="bronze/telemetry_car_Y{:04d}{:s}*".format(self.year, self.round_id)
         )
         ls = list(dataset_bronze.read_with_pattern())
         if len(ls) == 0:
