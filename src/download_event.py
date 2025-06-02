@@ -74,8 +74,8 @@ def main(year, round_id, force):
                 session_number=session,
                 force=force,
             )
-    run_silver_layer(year=year, round_id=round_id_fixed, force=force)
-    run_gold_layer(year=year, round_id=round_id_fixed, force=force)
+    run_silver_layer(year=year, round_id=round_id_fixed, force=True)
+    run_gold_layer(year=year, round_id=round_id_fixed, force=True)
 
 
 if __name__ == "__main__":
