@@ -1,14 +1,7 @@
 import argparse
-from pathlib import Path
-
-import fastf1
 
 import data_engineering.gold_layer as gold_layer
 import data_engineering.silver_layer as silver_layer
-
-cache_dir = Path(__file__).parent.parent / "cache"
-cache_dir.mkdir(parents=True, exist_ok=True)
-fastf1.Cache.enable_cache(cache_dir=cache_dir)
 
 
 def run_silver_layer(year):

@@ -1,3 +1,6 @@
+import json
+from datetime import UTC, datetime
+
 import pandas as pd
 
 from .datasets import DatasetLocal
@@ -30,8 +33,8 @@ class HistoricalSessions(DatasetLocal):
         aux = []
         for _, row in df.iterrows():
             this_event = {}
-            this_event["year"] = int(row["Year"])
-            this_event["round_number"] = int(row["RoundNumber"])
+            this_event["year"] = fix_integer(row["Year"])
+            this_event["round_number"] = fix_integer(row["RoundNumber"])
             this_event["country"] = fix_string(row["Country"])
             this_event["location"] = fix_string(row["Location"])
             this_event["event_name"] = fix_string(row["EventName"])
@@ -145,6 +148,88 @@ class SessionResults(DatasetLocal):
             drop=True
         )
         return df_output
+
+
+class SessionMetadata(DatasetLocal):
+    def __init__(self, year):
+        self.year = year
+        self.name = "gold/session_metadata_Y{:04d}".format(year)
+
+    @staticmethod
+    def parse_session(row):
+        output = {}
+        output["year"] = fix_integer(row["Year"])
+        output["session_id"] = fix_string(row["SessionId"])
+        output["session_name"] = fix_string(row["name"])
+        output["f1_api_support"] = bool(row["f1_api_support"])
+        output["timestamp_reference"] = datetime.fromisoformat(row["t0_date"]).replace(
+            tzinfo=UTC
+        )
+        output["timing_start"] = float(row["session_start_time"])
+        output["session_scheduled_time"] = datetime.fromisoformat(row["date"]).replace(
+            tzinfo=UTC
+        )
+        output["total_laps"] = row["total_laps"]
+        output["driver_list"] = sorted([fix_integer(x) for x in row["drivers"]])
+
+        session_info = json.loads(row["session_info"])
+        output["meeting_key"] = fix_integer(session_info.get("Meeting", {}).get("Key"))
+        output["meeting_name"] = fix_string(session_info.get("Meeting", {}).get("Name"))
+        output["meeting_official_name"] = fix_string(
+            session_info.get("Meeting", {}).get("OfficialName")
+        )
+        output["meeting_location"] = fix_string(
+            session_info.get("Meeting", {}).get("Location")
+        )
+        output["meeting_number"] = fix_integer(
+            session_info.get("Meeting", {}).get("Number")
+        )
+        output["country_key"] = fix_integer(
+            session_info.get("Meeting", {}).get("Country", {}).get("Key")
+        )
+        output["country_code"] = fix_string(
+            session_info.get("Meeting", {}).get("Country", {}).get("Code")
+        )
+        output["country_name"] = fix_string(
+            session_info.get("Meeting", {}).get("Country", {}).get("Name")
+        )
+        output["circuit_key"] = fix_integer(
+            session_info.get("Meeting", {}).get("Circuit", {}).get("Key")
+        )
+        output["circuit_short_name"] = fix_string(
+            session_info.get("Meeting", {}).get("Circuit", {}).get("ShortName")
+        )
+
+        event_info = json.loads(row["event"])
+        output["round_number"] = fix_integer(event_info.get("RoundNumber"))
+        output["event_country"] = fix_string(event_info.get("Country"))
+        output["event_location"] = fix_string(event_info.get("Location"))
+        output["event_name"] = fix_string(event_info.get("EventName"))
+        output["event_official_name"] = fix_string(event_info.get("OfficialEventName"))
+        output["event_date"] = datetime.fromisoformat(
+            event_info.get("EventDate")
+        ).date()
+        output["event_format"] = fix_string(event_info.get("EventFormat"))
+
+        sn = int(row["SessionId"][-1])
+        output["type"] = fix_string(event_info.get(f"Session{sn}"))
+        output["scheduled_time_utc"] = datetime.fromisoformat(
+            event_info.get(f"Session{sn}DateUtc")
+        ).replace(tzinfo=UTC)
+        output["scheduled_time_local"] = fix_string(event_info.get(f"Session{sn}Date"))
+
+        return output
+
+    def run(self):
+        dataset_source = DatasetLocal(
+            name="silver/session_metadata_Y{:04d}*".format(self.year)
+        )
+        ls = list(dataset_source.read_with_pattern())
+        if len(ls) == 0:
+            return None
+        df_in = pd.concat(ls)
+        df_out = pd.DataFrame([self.parse_session(r) for _, r in df_in.iterrows()])
+        return df_out
 
 
 class SessionWeather(DatasetLocal):
