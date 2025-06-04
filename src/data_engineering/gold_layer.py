@@ -217,7 +217,6 @@ class SessionMetadata(DatasetLocal):
             event_info.get(f"Session{sn}DateUtc")
         ).replace(tzinfo=UTC)
         output["scheduled_time_local"] = fix_string(event_info.get(f"Session{sn}Date"))
-
         return output
 
     def run(self):
@@ -229,7 +228,103 @@ class SessionMetadata(DatasetLocal):
             return None
         df_in = pd.concat(ls)
         df_out = pd.DataFrame([self.parse_session(r) for _, r in df_in.iterrows()])
+        df_out = df_out.sort_values(by=["year", "session_id"]).reset_index(drop=True)
         return df_out
+
+
+class SessionLaps(DatasetLocal):
+    def __init__(self, year):
+        self.year = year
+        self.name = "gold/session_laps_Y{:04d}".format(year)
+
+    def run(self):
+        dataset_source = DatasetLocal(
+            name="silver/session_laps_Y{:04d}*".format(self.year)
+        )
+        ls = list(dataset_source.read_with_pattern())
+        if len(ls) == 0:
+            return None
+        df = pd.concat(ls)
+
+        df["year"] = df["Year"].apply(fix_integer)
+        df["session_id"] = df["SessionId"].apply(fix_string)
+        df["driver_number"] = df["DriverNumber"].apply(fix_integer)
+        df["driver_name"] = df["Driver"].apply(fix_string)
+        df["driver_team"] = df["Team"].apply(fix_string)
+        df["lap_number"] = df["LapNumber"].apply(fix_integer)
+        df["timing_start_lap"] = df["LapStartTime"].apply(lambda x: x.total_seconds())
+        df["timing_end_lap"] = df["Time"].apply(lambda x: x.total_seconds())
+        df["timing_end_sector1"] = df["Sector1SessionTime"].apply(
+            lambda x: x.total_seconds()
+        )
+        df["timing_end_sector2"] = df["Sector2SessionTime"].apply(
+            lambda x: x.total_seconds()
+        )
+        df["timing_end_sector3"] = df["Sector3SessionTime"].apply(
+            lambda x: x.total_seconds()
+        )
+        df["timing_pit_out"] = df["PitOutTime"].apply(lambda x: x.total_seconds())
+        df["timing_pit_in"] = df["PitInTime"].apply(lambda x: x.total_seconds())
+        df["timestamp_lap_start"] = pd.to_datetime(df["LapStartDate"], utc=True)
+        df["time_lap"] = df["LapTime"].apply(lambda x: x.total_seconds())
+        df["time_sector1"] = df["Sector1Time"].apply(lambda x: x.total_seconds())
+        df["time_sector2"] = df["Sector2Time"].apply(lambda x: x.total_seconds())
+        df["time_sector3"] = df["Sector3Time"].apply(lambda x: x.total_seconds())
+        df["stint"] = df["Stint"].apply(fix_integer)
+        df["tyre_life"] = df["TyreLife"].apply(fix_integer)
+        df["tyre_compound"] = df["Compound"].apply(fix_string)
+        df["tyre_fresh"] = df["FreshTyre"].astype(bool)
+        df["speed_i1"] = df["SpeedI1"].astype(float)
+        df["speed_i2"] = df["SpeedI2"].astype(float)
+        df["speed_fl"] = df["SpeedFL"].astype(float)
+        df["speed_st"] = df["SpeedST"].astype(float)
+        df["is_personal_best"] = df["IsPersonalBest"].fillna(False).astype(bool)
+        df["track_status"] = df["TrackStatus"].apply(fix_integer)
+        df["position"] = df["Position"].apply(fix_integer)
+        df["deleted_status"] = df["TrackStatus"].fillna(False).astype(bool)
+        df["deleted_reason"] = df["DeletedReason"].apply(fix_string)
+        df["is_accurate"] = df["IsAccurate"].fillna(False).astype(bool)
+        df["is_fastf1_generated"] = df["FastF1Generated"].fillna(False).astype(bool)
+
+        columns = [
+            "year",
+            "session_id",
+            "driver_number",
+            "driver_name",
+            "driver_team",
+            "lap_number",
+            "stint",
+            "timestamp_lap_start",
+            "timing_start_lap",
+            "timing_end_lap",
+            "timing_end_sector1",
+            "timing_end_sector2",
+            "timing_end_sector3",
+            "timing_pit_out",
+            "timing_pit_in",
+            "time_lap",
+            "time_sector1",
+            "time_sector2",
+            "time_sector3",
+            "tyre_compound",
+            "tyre_life",
+            "tyre_fresh",
+            "speed_i1",
+            "speed_i2",
+            "speed_fl",
+            "speed_st",
+            "is_personal_best",
+            "track_status",
+            "position",
+            "deleted_status",
+            "deleted_reason",
+            "is_accurate",
+            "is_fastf1_generated",
+        ]
+        output = df.sort_values(by=["year", "session_id"])[columns].reset_index(
+            drop=True
+        )
+        return output
 
 
 class SessionWeather(DatasetLocal):

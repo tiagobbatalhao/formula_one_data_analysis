@@ -25,6 +25,8 @@ def run_gold_layer(year):
     force = True
     gold_layer.HistoricalSessions().read(force=force)
     gold_layer.SessionResults(year).read(force=force)
+    gold_layer.SessionMetadata(year).read(force=force)
+    gold_layer.SessionLaps(year).read(force=force)
     gold_layer.SessionWeather(year).read(force=force)
 
 
