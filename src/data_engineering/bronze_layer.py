@@ -317,6 +317,35 @@ class TelemetryPosData(DatasetLocal):
         return data
 
 
+class CircuitMarkers(DatasetLocal):
+    def __init__(self, year: int, round_number: int, session_number: int):
+        self.year = int(year)
+        self.round_number = int(round_number)
+        self.session_number = int(session_number)
+        self.name = "bronze/circuit_{}".format(self.get_session_id())
+
+    def run(self):
+        session = self.load_session()
+        if session is None:
+            return None
+        try:
+            circuit_info = session.get_circuit_info()
+        except DataNotLoadedError:
+            return None
+        aux = [
+            pd.DataFrame(circuit_info.corners).assign(annotation_type="corner"),
+            pd.DataFrame(circuit_info.marshal_lights).assign(
+                annotation_type="marshal_lights"
+            ),
+            pd.DataFrame(circuit_info.marshal_sectors).assign(
+                annotation_type="marshal_sectors"
+            ),
+        ]
+        data = pd.concat(aux).assign(rotation=circuit_info.rotation)
+        data = self.add_metadata(data)
+        return data
+
+
 class OfficialSessionMetadata(OfficialSession, SessionMetadata):
     pass
 
@@ -378,4 +407,12 @@ class OfficialTelemetryPosData(OfficialSession, TelemetryPosData):
 
 
 class TestingTelemetryPosData(TestingSession, TelemetryPosData):
+    pass
+
+
+class OfficialCircuitMarkers(OfficialSession, CircuitMarkers):
+    pass
+
+
+class TestingCircuitMarkers(TestingSession, CircuitMarkers):
     pass

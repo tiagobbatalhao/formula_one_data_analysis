@@ -20,6 +20,7 @@ def download_official_session(year, round_number, session_number, force):
     bronze_layer.OfficialSessionRaceControlMessages(*args).read(force=force)
     bronze_layer.OfficialTelemetryCarData(*args).read(force=force)
     bronze_layer.OfficialTelemetryPosData(*args).read(force=force)
+    bronze_layer.OfficialCircuitMarkers(*args).read(force=force)
 
 
 def download_testing_session(year, round_number, session_number, force):
@@ -32,6 +33,7 @@ def download_testing_session(year, round_number, session_number, force):
     bronze_layer.TestingSessionRaceControlMessages(*args).read(force=force)
     bronze_layer.TestingTelemetryCarData(*args).read(force=force)
     bronze_layer.TestingTelemetryPosData(*args).read(force=force)
+    bronze_layer.TestingCircuitMarkers(*args).read(force=force)
 
 
 def main(year, round_id, force):
@@ -39,7 +41,6 @@ def main(year, round_id, force):
     assert round_type in ["R", "T"], ""
     round_number = int(round_id[1:])
     if round_type == "R":
-        round_id_fixed = "R{:02d}".format(round_number)
         for session in range(1, 6):
             download_official_session(
                 year=year,
@@ -48,7 +49,6 @@ def main(year, round_id, force):
                 force=force,
             )
     else:
-        round_id_fixed = "T{:02d}".format(round_number)
         for session in range(1, 6):
             download_testing_session(
                 year=year,

@@ -171,3 +171,20 @@ class TelemetryPosData(DatasetLocal):
         other = [c for c in df.columns if c not in idx]
         df = df.sort_values(by=idx)[idx + other].reset_index(drop=True)
         return df
+
+
+class CircuitMarkers(DatasetLocal):
+    def __init__(self, year):
+        self.year = year
+        self.name = "silver/circuit_{:04d}".format(year)
+
+    def run(self):
+        dataset_bronze = DatasetLocal(name="bronze/circuit_Y{:04d}*".format(self.year))
+        ls = list(dataset_bronze.read_with_pattern())
+        if len(ls) == 0:
+            return None
+        df = pd.concat(ls)
+        idx = ["Year", "SessionId"]
+        other = [c for c in df.columns if c not in idx]
+        df = df.sort_values(by=idx)[idx + other].reset_index(drop=True)
+        return df

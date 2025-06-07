@@ -717,7 +717,7 @@ class SessionRaceControlMessages(DatasetLocal):
         df = pd.concat(ls)
         df["year"] = df["Year"].astype(pd.Int64Dtype())
         df["session_id"] = df["SessionId"].apply(fix_string)
-        df["timestamp"] = pd.to_datetime(df['Time'], utc=True)
+        df["timestamp"] = pd.to_datetime(df["Time"], utc=True)
         df["category"] = df["Category"].apply(fix_string)
         df["message"] = df["Message"].apply(fix_string)
         df["status"] = df["Status"].apply(fix_string)
@@ -728,10 +728,21 @@ class SessionRaceControlMessages(DatasetLocal):
             df["RacingNumber"].apply(fix_integer).astype(pd.Int64Dtype())
         )
         df["lap_number"] = df["Lap"].apply(fix_integer).astype(pd.Int64Dtype())
+        df_session = SessionMetadata(self.year).read()
+        df = df.merge(
+            df_session[["year", "session_id", "timestamp_reference"]],
+            on=["year", "session_id"],
+            how="left",
+        )
+        df["timing_from_session"] = df.apply(
+            lambda r: (r["timestamp"] - r["timestamp_reference"]).total_seconds(),
+            axis=1,
+        )
         columns = [
             "year",
             "session_id",
             "timestamp",
+            "timing_from_session",
             "category",
             "message",
             "status",
@@ -744,4 +755,43 @@ class SessionRaceControlMessages(DatasetLocal):
         df_output = df.sort_values(by=["year", "session_id", "timestamp"])[
             columns
         ].reset_index(drop=True)
+        return df_output
+
+
+class CircuitMarkers(DatasetLocal):
+    def __init__(self, year):
+        self.year = year
+        self.name = "gold/circuit_markers{:04d}".format(year)
+
+    def run(self):
+        dataset_source = DatasetLocal(name="silver/circuit_{:04d}*".format(self.year))
+        ls = list(dataset_source.read_with_pattern())
+        if len(ls) == 0:
+            return None
+        df = pd.concat(ls)
+        df["year"] = df["Year"].astype(pd.Int64Dtype())
+        df["session_id"] = df["SessionId"].apply(fix_string)
+        df["coordinate_x"] = df["X"].astype(float)
+        df["coordinate_y"] = df["Y"].astype(float)
+        df["number"] = df["Number"].apply(fix_integer).astype(pd.Int64Dtype())
+        df["letter"] = df["Letter"].apply(fix_string)
+        df["angle"] = df["Angle"].astype(float)
+        df["distance"] = df["Distance"].astype(float)
+        df["rotation"] = df["rotation"].astype(float)
+        df["annotation_type"] = df["annotation_type"].apply(fix_string)
+        columns = [
+            "year",
+            "session_id",
+            "annotation_type",
+            "number",
+            "letter",
+            "coordinate_x",
+            "coordinate_y",
+            "angle",
+            "distance",
+            "rotation",
+        ]
+        df_output = df.sort_values(by=["year", "session_id"])[columns].reset_index(
+            drop=True
+        )
         return df_output

@@ -13,6 +13,7 @@ def run_silver_layer(year):
     silver_layer.SessionWeather(year).read(force=force)
     silver_layer.SessionTrackStatus(year).read(force=force)
     silver_layer.SessionRaceControlMessages(year).read(force=force)
+    silver_layer.CircuitMarkers(year).read(force=force)
     for rn in range(1, 30):
         silver_layer.TelemetryCarData(year, f"R{rn:02d}").read(force=force)
         silver_layer.TelemetryPosData(year, f"R{rn:02d}").read(force=force)
@@ -31,6 +32,7 @@ def run_gold_layer(year):
     gold_layer.SessionTrackStatus(year).read(force=force)
     gold_layer.SessionRaceControlMessages(year).read(force=force)
     gold_layer.LapTiming(year).read(force=force)
+    gold_layer.CircuitMarkers(year).read(force=force)
     for i in range(1, 30):
         gold_layer.TelemetryPosData(year, f"R{i:02d}").read(force=force)
         gold_layer.TelemetryCarData(year, f"R{i:02d}").read(force=force)
