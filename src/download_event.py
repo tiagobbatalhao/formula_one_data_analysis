@@ -4,8 +4,6 @@ from pathlib import Path
 import fastf1
 
 import data_engineering.bronze_layer as bronze_layer
-import data_engineering.gold_layer as gold_layer
-import data_engineering.silver_layer as silver_layer
 
 cache_dir = Path(__file__).parent.parent / "cache"
 cache_dir.mkdir(parents=True, exist_ok=True)
@@ -36,22 +34,6 @@ def download_testing_session(year, round_number, session_number, force):
     bronze_layer.TestingTelemetryPosData(*args).read(force=force)
 
 
-def run_silver_layer(year, round_id, force):
-    silver_layer.SessionMetadata(year).read(force=force)
-    silver_layer.SessionResults(year).read(force=force)
-    silver_layer.SessionLaps(year).read(force=force)
-    silver_layer.SessionWeather(year).read(force=force)
-    silver_layer.SessionTrackStatus(year).read(force=force)
-    silver_layer.SessionRaceControlMessages(year).read(force=force)
-    silver_layer.TelemetryCarData(year, round_id).read(force=force)
-    silver_layer.TelemetryPosData(year, round_id).read(force=force)
-
-
-def run_gold_layer(year, round_id, force):
-    gold_layer.SessionResults(year).read(force=force)
-    gold_layer.SessionWeather(year).read(force=force)
-
-
 def main(year, round_id, force):
     round_type = round_id[0].upper()
     assert round_type in ["R", "T"], ""
@@ -74,8 +56,6 @@ def main(year, round_id, force):
                 session_number=session,
                 force=force,
             )
-    run_silver_layer(year=year, round_id=round_id_fixed, force=True)
-    run_gold_layer(year=year, round_id=round_id_fixed, force=True)
 
 
 if __name__ == "__main__":

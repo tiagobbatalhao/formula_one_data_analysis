@@ -24,10 +24,19 @@ def run_silver_layer(year):
 def run_gold_layer(year):
     force = True
     gold_layer.HistoricalSessions().read(force=force)
-    gold_layer.SessionResults(year).read(force=force)
     gold_layer.SessionMetadata(year).read(force=force)
+    gold_layer.SessionResults(year).read(force=force)
     gold_layer.SessionLaps(year).read(force=force)
     gold_layer.SessionWeather(year).read(force=force)
+    gold_layer.SessionTrackStatus(year).read(force=force)
+    gold_layer.SessionRaceControlMessages(year).read(force=force)
+    gold_layer.LapTiming(year).read(force=force)
+    for i in range(1, 30):
+        gold_layer.TelemetryPosData(year, f"R{i:02d}").read(force=force)
+        gold_layer.TelemetryCarData(year, f"R{i:02d}").read(force=force)
+    for i in range(1, 3):
+        gold_layer.TelemetryPosData(year, f"T{i:02d}").read(force=force)
+        gold_layer.TelemetryCarData(year, f"T{i:02d}").read(force=force)
 
 
 def main(year):
