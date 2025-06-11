@@ -180,6 +180,16 @@ def format_output(fitting, predict_size, adjustment):
         "derivative_z",
     ]
     save = save.sort_values(by=["encoding"])
+
+    diff_coordinate_x = np.diff(
+        np.append(save["coordinate_x"], save["coordinate_x"][0])
+    )
+    diff_coordinate_y = np.diff(
+        np.append(save["coordinate_y"], save["coordinate_y"][0])
+    )
+    diffXY = np.sqrt(diff_coordinate_x**2 + diff_coordinate_y**2)
+    save["total_distance_m"] = float(diffXY.sum()) / 10.0
+    save["distance_m"] = np.insert(diffXY.cumsum()[:-1], 0, 0) / 10.0
     return save
 
 
@@ -189,7 +199,6 @@ def find_circuit_map(df_position, max_degree, predict_size):
         fitting_by_time, max_degree, predict_size
     )
     start_encoding = adjust_starting_point(fitting_by_distance, df_position)
-    print("Start adjustment is {}".format(start_encoding))
     save = format_output(fitting_by_distance, predict_size, start_encoding)
 
     return dict(
