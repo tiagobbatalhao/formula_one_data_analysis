@@ -1,5 +1,4 @@
 import streamlit as st
-
 from data_loader import load_session_metadata
 from tab_session_laps import tab_session_laps
 from tab_session_race_trace import tab_session_race_trace
@@ -12,7 +11,7 @@ def main():
 
     # Load historical sessions for selection
     st.sidebar.header("Select Session")
-    years = list(range(1950, 2026))[::-1]
+    years = list(range(1950, 2027))[::-1]
     selected_year = st.sidebar.selectbox("Year", years)
     sessions_for_year = load_session_metadata(year=selected_year)
     round_names = sessions_for_year.drop_duplicates(subset=["event_name"])[

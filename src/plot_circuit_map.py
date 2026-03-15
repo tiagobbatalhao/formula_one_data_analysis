@@ -1,4 +1,5 @@
 import argparse
+import pathlib
 
 import numpy as np
 import pandas as pd
@@ -16,9 +17,11 @@ def rotate(array, angle_deg):
 
 
 def main(session_id, rotation_angle=None):
-    df_circuit_map = pd.read_parquet(f"circuit_map_{session_id}.parquet")
-    df_markers = gold_layer.CircuitMarkers(int(session_id[1:5])).read()
-    df_markers = df_markers[df_markers["session_id"] == session_id]
+    session_id_markers = session_id.split("_")[0]
+    save_folder = pathlib.Path(__file__).resolve().parent.parent / "data" / "artifacts"
+    df_circuit_map = pd.read_parquet(save_folder / f"circuit_map_{session_id}.parquet")
+    df_markers = gold_layer.CircuitMarkers(int(session_id_markers[1:5])).read()
+    df_markers = df_markers[df_markers["session_id"] == session_id_markers]
 
     if isinstance(rotation_angle, float):
         rotation_angle = rotation_angle
@@ -124,7 +127,8 @@ def main(session_id, rotation_angle=None):
         scaleanchor="x",
         scaleratio=1,
     )
-    fig.write_html(f"circuit_figure_{session_id}.html")
+    path_save = (save_folder / f"circuit_figure_{session_id}.html").as_posix()
+    fig.write_html(path_save)
 
 
 if __name__ == "__main__":

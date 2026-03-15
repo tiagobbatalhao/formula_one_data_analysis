@@ -36,20 +36,26 @@ def download_testing_session(year, round_number, session_number, force):
     bronze_layer.TestingCircuitMarkers(*args).read(force=force)
 
 
-def main(year, round_id, force):
+def main(year, round_id, session="", force=False):
     round_type = round_id[0].upper()
     assert round_type in ["R", "T"], ""
     round_number = int(round_id[1:])
+    if (session == "") and (round_type == "R"):
+        sessions = list(range(1, 6))
+    elif (session == "") and (round_type == "T"):
+        sessions = list(range(1, 4))
+    else:
+        sessions = [int(session)]
     if round_type == "R":
-        for session in range(1, 6):
+        for session in sessions:
             download_official_session(
                 year=year,
                 round_number=round_number,
                 session_number=session,
                 force=force,
             )
-    else:
-        for session in range(1, 6):
+    elif round_type == "T":
+        for session in sessions:
             download_testing_session(
                 year=year,
                 round_number=round_number,
@@ -62,6 +68,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("year", type=int)
     parser.add_argument("round_id", type=str)
+    parser.add_argument("--session_id", type=str, default="")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
-    main(year=args.year, round_id=args.round_id, force=args.force)
+    main(
+        year=args.year,
+        round_id=args.round_id,
+        session=args.session_id,
+        force=args.force,
+    )
