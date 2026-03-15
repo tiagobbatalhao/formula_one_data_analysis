@@ -12,7 +12,7 @@ def main():
 
     # Load historical sessions for selection
     st.sidebar.header("Select Session")
-    years = list(range(1950, 2026))[::-1]
+    years = list(range(1950, 2027))[::-1]
     selected_year = st.sidebar.selectbox("Year", years)
     sessions_for_year = load_session_metadata(year=selected_year)
     round_names = sessions_for_year.drop_duplicates(subset=["event_name"])[
