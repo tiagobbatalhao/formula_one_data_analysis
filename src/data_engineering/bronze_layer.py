@@ -1,10 +1,10 @@
 import json
+from typing import Optional, Union
 
 import fastf1
 import pandas as pd
 from fastf1.core import DataNotLoadedError
 from loguru import logger
-from typing import Optional, Union
 
 from .datasets import DatasetLocal
 
@@ -432,23 +432,23 @@ class TelemetryCarData(DatasetLocal):
             this = lap.get_car_data()
             try:
                 this = this.add_distance()
-            except Exception as e:
+            except Exception:
                 this = this.assign(Distance=None)
             try:
                 this = this.add_differential_distance()
-            except Exception as e:
+            except Exception:
                 this = this.assign(DifferentialDistance=None)
             try:
                 this = this.add_relative_distance()
-            except Exception as e:
+            except Exception:
                 this = this.assign(RelativeDistance=None)
             try:
                 this = this.add_track_status()
-            except Exception as e:
+            except Exception:
                 this = this.assign(TrackStatus=None)
             try:
                 this = this.add_driver_ahead()
-            except Exception as e:
+            except Exception:
                 this = this.assign(DriverAhead=None, DistanceToDriverAhead=None)
             this = this.assign(**{c: lap[c] for c in ["DriverNumber", "LapNumber"]})
             aux.append(pd.DataFrame(this))
@@ -494,23 +494,23 @@ class TelemetryPosData(DatasetLocal):
             this = lap.get_pos_data()
             try:
                 this = this.add_distance()
-            except Exception as e:
+            except Exception:
                 this = this.assign(Distance=None)
             try:
                 this = this.add_differential_distance()
-            except Exception as e:
+            except Exception:
                 this = this.assign(DifferentialDistance=None)
             try:
                 this = this.add_relative_distance()
-            except Exception as e:
+            except Exception:
                 this = this.assign(RelativeDistance=None)
             try:
                 this = this.add_track_status()
-            except Exception as e:
+            except Exception:
                 this = this.assign(TrackStatus=None)
             try:
                 this = this.add_driver_ahead()
-            except Exception as e:
+            except Exception:
                 this = this.assign(DriverAhead=None, DistanceToDriverAhead=None)
             this = this.assign(**{c: lap[c] for c in ["DriverNumber", "LapNumber"]})
             aux.append(pd.DataFrame(this))
@@ -567,89 +567,107 @@ class CircuitMarkers(DatasetLocal):
 
 class OfficialSessionMetadata(OfficialSession, SessionMetadata):
     """Official session metadata dataset."""
+
     pass
 
 
 class TestingSessionMetadata(TestingSession, SessionMetadata):
     """Testing session metadata dataset."""
+
     pass
 
 
 class OfficialSessionResults(OfficialSession, SessionResults):
     """Official session results dataset."""
+
     pass
 
 
 class TestingSessionResults(TestingSession, SessionResults):
     """Testing session results dataset."""
+
     pass
 
 
 class OfficialSessionLaps(OfficialSession, SessionLaps):
     """Official session laps dataset."""
+
     pass
 
 
 class TestingSessionLaps(TestingSession, SessionLaps):
     """Testing session laps dataset."""
+
     pass
 
 
 class OfficialSessionWeather(OfficialSession, SessionWeather):
     """Official session weather dataset."""
+
     pass
 
 
 class TestingSessionWeather(TestingSession, SessionWeather):
     """Testing session weather dataset."""
+
     pass
 
 
 class OfficialSessionTrackStatus(OfficialSession, SessionTrackStatus):
     """Official session track status dataset."""
+
     pass
 
 
 class TestingSessionTrackStatus(TestingSession, SessionTrackStatus):
     """Testing session track status dataset."""
+
     pass
 
 
 class OfficialSessionRaceControlMessages(OfficialSession, SessionRaceControlMessages):
     """Official session race control messages dataset."""
+
     pass
 
 
 class TestingSessionRaceControlMessages(TestingSession, SessionRaceControlMessages):
     """Testing session race control messages dataset."""
+
     pass
 
 
 class OfficialTelemetryCarData(OfficialSession, TelemetryCarData):
     """Official telemetry car data dataset."""
+
     pass
 
 
 class TestingTelemetryCarData(TestingSession, TelemetryCarData):
     """Testing telemetry car data dataset."""
+
     pass
 
 
 class OfficialTelemetryPosData(OfficialSession, TelemetryPosData):
     """Official telemetry position data dataset."""
+
     pass
 
 
 class TestingTelemetryPosData(TestingSession, TelemetryPosData):
     """Testing telemetry position data dataset."""
+
     pass
 
 
 class OfficialCircuitMarkers(OfficialSession, CircuitMarkers):
     """Official circuit markers dataset."""
+
     pass
 
 
 class TestingCircuitMarkers(TestingSession, CircuitMarkers):
     """Testing circuit markers dataset."""
+
     pass
