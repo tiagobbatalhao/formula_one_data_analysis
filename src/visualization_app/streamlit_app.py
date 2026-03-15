@@ -1,5 +1,7 @@
+import plotly.graph_objects as go
 import streamlit as st
 from data_loader import load_session_metadata
+from tab_lap_telemetry import get_circuit_map, tab_lap_telemetry
 from tab_session_laps import tab_session_laps
 from tab_session_race_trace import tab_session_race_trace
 from tab_session_result import tab_session_result
@@ -32,7 +34,9 @@ def main():
         "{} - {}".format(session_info["meeting_name"], session_info["session_name"])
     )
 
-    tabs = st.tabs(["Result", "Lap history", "Race trace"])
+    tabs = st.tabs(
+        ["Result", "Lap history", "Race trace", "Lap telemetry", "Circuit map"]
+    )
 
     with tabs[0]:
         tab_session_result(session_info)
@@ -40,6 +44,42 @@ def main():
         tab_session_laps(session_info)
     with tabs[2]:
         tab_session_race_trace(session_info)
+    with tabs[3]:
+        tab_lap_telemetry(session_info)
+    with tabs[4]:
+        df = get_circuit_map(session_info["session_id"])
+        spanX = (df["coordinate_x"].min(), df["coordinate_x"].max())
+        spanY = (df["coordinate_y"].min(), df["coordinate_y"].max())
+        centerX = (spanX[1] + spanX[0]) / 2
+        rangeX = spanX[1] - spanX[0]
+        centerY = (spanY[1] + spanY[0]) / 2
+        plot_data = [
+            go.Scatter(
+                x=(df["coordinate_x"] - centerX) / 10.0,
+                y=(df["coordinate_y"] - centerY) / 10.0,
+                text=(df["absolute_distance"] / 10).apply(
+                    lambda x: f"Distance {x:.1f} m"
+                ),
+                hoverinfo="text",
+                mode="markers",
+                marker=dict(size=2),
+            )
+        ]
+
+        rangeY = spanY[1] - spanY[0]
+        range_ = max(rangeX, rangeY)
+        spanXY = [-0.55 * range_, 0.55 * range_]
+        spanXY = [x / 10.0 for x in spanXY]
+        plot_layout = dict(
+            title="Circuit Map",
+            xaxis=dict(range=spanXY, tickvals=[], showgrid=False, zeroline=False),
+            yaxis=dict(range=spanXY, tickvals=[], showgrid=False, zeroline=False),
+            width=1200,
+            height=1200,
+            showlegend=False,
+        )
+        fig = go.Figure(data=plot_data, layout=plot_layout)
+        st.plotly_chart(fig)
 
 
 if __name__ == "__main__":

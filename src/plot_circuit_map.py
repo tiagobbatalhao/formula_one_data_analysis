@@ -17,6 +17,7 @@ def rotate(array, angle_deg):
 
 
 def main(session_id, rotation_angle=None):
+    session_id = session_id.replace(",", "_")
     session_id_markers = session_id.split("_")[0]
     save_folder = pathlib.Path(__file__).resolve().parent.parent / "data" / "artifacts"
     df_circuit_map = pd.read_parquet(save_folder / f"circuit_map_{session_id}.parquet")

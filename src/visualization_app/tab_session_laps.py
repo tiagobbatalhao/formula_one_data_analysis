@@ -1,6 +1,7 @@
 import math
 from datetime import timedelta
 
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from data_loader import load_session_laps, load_session_results
@@ -36,10 +37,14 @@ def tab_session_laps(session_info):
     df = df.sort_values(by=["driver_number", "lap_number"])
 
     min_lap_time = df["time_lap"].dropna().min()
+    reference_timestamp = df["timestamp_lap_start"].min()
+    df["elapsed_time"] = pd.to_datetime(df["timestamp_lap_end"]).apply(
+        lambda v: (v - reference_timestamp).total_seconds()
+    )
 
     plot_data = []
     for driver in sorted(df["driver_number"].unique()):
-        this = df[df["driver_number"] == driver]
+        this = df[(df["driver_number"] == driver)]
         if len(this) == 0:
             continue
         color = "#" + this["team_color"].iloc[0]
@@ -49,7 +54,7 @@ def tab_session_laps(session_info):
         )
         plot_data += [
             go.Scatter(
-                x=this["timestamp_lap_end"],
+                x=this["elapsed_time"] / 60.0,
                 y=this["time_lap"],
                 mode="lines+markers",
                 name=this.iloc[0]["driver_name"],
@@ -67,6 +72,7 @@ def tab_session_laps(session_info):
                 math.ceil(min_lap_time * 1.11 / 0.1) * 0.1,
             )
         ),
+        xaxis=dict(title="Time (minutes)"),
     )
     fig = go.Figure(data=plot_data, layout=plot_layout)
     st.plotly_chart(fig)
