@@ -1,9 +1,12 @@
+import pathlib
+from importlib.resources import path
 import argparse
 from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import scipy.optimize
 from sklearn.linear_model import LinearRegression
+import pathlib
 
 import data_engineering.gold_layer as gold_layer
 
@@ -426,7 +429,14 @@ def main(session_ids: List[str], best_laps: int, max_degree: int, predict_size: 
         max_degree=max_degree,
         predict_size=predict_size
     )
-    output["data"].to_parquet(f"circuit_map_{session_id}.parquet", index=False)
+    session_ids_str = "_".join(session_ids)
+    save_folder = (
+        pathlib.Path(__file__).resolve().parent.parent
+        / "data" / "artifacts"
+    )
+    save_folder.mkdir(parents=True, exist_ok=True)
+    filename = f"circuit_map_{session_ids_str}.parquet"
+    output["data"].to_parquet(save_folder / filename, index=False)
     return output
 
 
