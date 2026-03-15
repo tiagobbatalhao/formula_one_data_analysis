@@ -1,6 +1,5 @@
 import pandas as pd
 import streamlit as st
-
 from data_loader import load_session_results
 
 

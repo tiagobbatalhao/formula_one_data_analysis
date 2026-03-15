@@ -75,5 +75,5 @@ if __name__ == "__main__":
         year=args.year,
         round_id=args.round_id,
         session=args.session_id,
-        force=args.force
+        force=args.force,
     )

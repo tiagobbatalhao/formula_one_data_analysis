@@ -3,7 +3,6 @@ from datetime import timedelta
 
 import plotly.graph_objects as go
 import streamlit as st
-
 from data_loader import load_session_laps, load_session_results
 from tab_utils import choose_driver_colors
 

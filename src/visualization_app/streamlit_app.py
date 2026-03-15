@@ -1,5 +1,4 @@
 import streamlit as st
-
 from data_loader import load_session_metadata
 from tab_session_laps import tab_session_laps
 from tab_session_race_trace import tab_session_race_trace
