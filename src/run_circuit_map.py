@@ -1,13 +1,22 @@
 import argparse
 import pathlib
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+from uuid import uuid4
 
+import mlflow
 import numpy as np
 import pandas as pd
 import scipy.optimize
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 
 import data_engineering.gold_layer as gold_layer
+
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
+mlflow.set_experiment("formula_one_circuit_map")
+
+DATA_FOLDER = pathlib.Path(__file__).parent.resolve() / "data"
+DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
 class FourierFit:
@@ -21,7 +30,7 @@ class FourierFit:
         model (LinearRegression): The fitted linear regression model
     """
 
-    def __init__(self, max_degree: int):
+    def __init__(self, max_degree: int, mlflow_tags: Dict[str, Any] = {}):
         """Initialize FourierFit with maximum degree.
 
         Args:
@@ -35,6 +44,7 @@ class FourierFit:
         self.max_degree = max_degree
         self.model: Optional[LinearRegression] = None
         self._twopi = 2 * np.pi  # Cache frequently used value
+        self.mlflow_tags = mlflow_tags
 
     def _get_basis_function(self, val: float) -> np.ndarray:
         """Calculate the basis functions for a given value.
@@ -107,12 +117,46 @@ class FourierFit:
         Returns:
             self: The fitted model
         """
-        X = np.array(X).reshape(-1)
-        y = np.array(y).reshape(-1)
+        run_name = "{}-{}-{}".format(
+            self.mlflow_tags.get("run_id"),
+            self.mlflow_tags.get("method"),
+            self.mlflow_tags.get("coordinate"),
+        )
+        with mlflow.start_run(run_name=run_name):
+            mlflow.set_tags(self.mlflow_tags)
+            X = np.array(X).reshape(-1)
+            y = np.array(y).reshape(-1)
+            features = np.vstack([self._get_basis_function(x) for x in X])
 
-        features = np.vstack([self._get_basis_function(x) for x in X])
-        self.model = LinearRegression(fit_intercept=False)
-        self.model.fit(features, y)
+            tmp_file = DATA_FOLDER / "input_x.npy"
+            np.save(tmp_file, X)
+            mlflow.log_artifact(tmp_file.as_posix())
+            tmp_file.unlink()
+            tmp_file = DATA_FOLDER / "target.npy"
+            np.save(tmp_file, y)
+            mlflow.log_artifact(tmp_file.as_posix())
+            tmp_file.unlink()
+            tmp_file = DATA_FOLDER / "features.npy"
+            np.save(tmp_file, features)
+            mlflow.log_artifact(tmp_file.as_posix())
+            tmp_file.unlink()
+
+            self.model = LinearRegression(fit_intercept=False)
+            self.model.fit(features, y)
+
+            model_info = mlflow.sklearn.log_model(
+                sk_model=self.model, name="fourier_coefficients"
+            )
+
+            tmp_file = DATA_FOLDER / "coefficients.npy"
+            np.save(tmp_file, self.model.coef_)
+            mlflow.log_artifact(tmp_file.as_posix())
+            tmp_file.unlink()
+
+            pred = self.model.predict(features)
+            mlflow.log_metric("mae", mean_absolute_error(y, pred))
+            mlflow.log_metric("rmse", root_mean_squared_error(y, pred))
+
         return self
 
     def predict(self, X: Union[np.ndarray, List[float]]) -> np.ndarray:
@@ -183,7 +227,7 @@ class FourierFit:
 
 
 def fit_map_by_time(
-    df_position: pd.DataFrame, max_degree: int
+    df_position: pd.DataFrame, max_degree: int, mlflow_tags: Dict[str, Any] = {}
 ) -> Dict[str, FourierFit]:
     """Fit Fourier series to position data using time-based encoding.
 
@@ -210,14 +254,17 @@ def fit_map_by_time(
     encoding_by_time = df_position["timing_from_lap"] / df_position["time_lap"]
     fitting_by_time = {}
     for coord in ["x", "y", "z"]:
-        fitting_by_time[coord] = FourierFit(max_degree).fit(
-            encoding_by_time, df_position[f"coordinate_{coord}"]
-        )
+        fitting_by_time[coord] = FourierFit(
+            max_degree, mlflow_tags={**mlflow_tags, "coordinate": coord}
+        ).fit(encoding_by_time, df_position[f"coordinate_{coord}"])
     return fitting_by_time
 
 
 def correct_fit_by_distance(
-    fitting_by_time: Dict[str, FourierFit], max_degree: int, predict_size: int
+    fitting_by_time: Dict[str, FourierFit],
+    max_degree: int,
+    predict_size: int,
+    mlflow_tags: Dict[str, Any] = {},
 ) -> Dict[str, FourierFit]:
     """Correct the time-based fit using distance-based encoding.
 
@@ -241,9 +288,9 @@ def correct_fit_by_distance(
     # Fit new models using distance-based encoding
     fitting_by_distance = {}
     for i, coord in enumerate(["x", "y", "z"]):
-        fitting_by_distance[coord] = FourierFit(max_degree).fit(
-            encoding_by_distance, data_by_time[:, i]
-        )
+        fitting_by_distance[coord] = FourierFit(
+            max_degree, mlflow_tags={**mlflow_tags, "coordinate": coord}
+        ).fit(encoding_by_distance, data_by_time[:, i])
     return fitting_by_distance
 
 
@@ -357,7 +404,10 @@ def format_output(
 
 
 def find_circuit_map(
-    df_position: pd.DataFrame, max_degree: int, predict_size: int
+    df_position: pd.DataFrame,
+    max_degree: int,
+    predict_size: int,
+    mlflow_tags: Dict[str, Any] = {},
 ) -> Dict[str, Union[Dict[str, FourierFit], pd.DataFrame, float]]:
     """Find the circuit map using position data.
 
@@ -372,9 +422,14 @@ def find_circuit_map(
             - data: Circuit map data
             - adjustment: Starting point adjustment
     """
-    fitting_by_time = fit_map_by_time(df_position, max_degree)
+    fitting_by_time = fit_map_by_time(
+        df_position, max_degree, mlflow_tags={**mlflow_tags, "method": "time"}
+    )
     fitting_by_distance = correct_fit_by_distance(
-        fitting_by_time, max_degree, predict_size
+        fitting_by_time,
+        max_degree,
+        predict_size,
+        mlflow_tags={**mlflow_tags, "method": "distance"},
     )
     start_encoding = adjust_starting_point(fitting_by_distance, df_position)
     save = format_output(fitting_by_distance, predict_size, start_encoding)
@@ -433,7 +488,13 @@ def main(
     df_pos_keep = df_pos.merge(df_laps_keep[idx + ["time_lap"]], on=idx, how="inner")
 
     output = find_circuit_map(
-        df_position=df_pos_keep, max_degree=max_degree, predict_size=predict_size
+        df_position=df_pos_keep,
+        max_degree=max_degree,
+        predict_size=predict_size,
+        mlflow_tags={
+            "session_ids": "_".join(session_ids),
+            "run_id": str(uuid4()),
+        },
     )
     session_ids_str = "_".join(session_ids)
     save_folder = pathlib.Path(__file__).resolve().parent.parent / "data" / "artifacts"
