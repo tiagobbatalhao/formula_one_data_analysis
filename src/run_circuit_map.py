@@ -30,7 +30,7 @@ class FourierFit:
         model (LinearRegression): The fitted linear regression model
     """
 
-    def __init__(self, max_degree: int, mlflow_tags: Dict[str, Any] = {}):
+    def __init__(self, max_degree: int, suffix: str = ""):
         """Initialize FourierFit with maximum degree.
 
         Args:
@@ -44,7 +44,7 @@ class FourierFit:
         self.max_degree = max_degree
         self.model: Optional[LinearRegression] = None
         self._twopi = 2 * np.pi  # Cache frequently used value
-        self.mlflow_tags = mlflow_tags
+        self.suffix = suffix
 
     def _get_basis_function(self, val: float) -> np.ndarray:
         """Calculate the basis functions for a given value.
@@ -117,45 +117,39 @@ class FourierFit:
         Returns:
             self: The fitted model
         """
-        run_name = "{}-{}-{}".format(
-            self.mlflow_tags.get("run_id"),
-            self.mlflow_tags.get("method"),
-            self.mlflow_tags.get("coordinate"),
+        X = np.array(X).reshape(-1)
+        y = np.array(y).reshape(-1)
+        features = np.vstack([self._get_basis_function(x) for x in X])
+
+        suffix = self.suffix
+        tmp_file = DATA_FOLDER / f"input{suffix}.npy"
+        np.save(tmp_file, X)
+        mlflow.log_artifact(tmp_file.as_posix())
+        tmp_file.unlink()
+        tmp_file = DATA_FOLDER / f"target{suffix}.npy"
+        np.save(tmp_file, y)
+        mlflow.log_artifact(tmp_file.as_posix())
+        tmp_file.unlink()
+        tmp_file = DATA_FOLDER / f"features{suffix}.npy"
+        np.save(tmp_file, features)
+        mlflow.log_artifact(tmp_file.as_posix())
+        tmp_file.unlink()
+
+        self.model = LinearRegression(fit_intercept=False)
+        self.model.fit(features, y)
+
+        model_info = mlflow.sklearn.log_model(
+            sk_model=self.model, name=("fourier_coefficients" + suffix)
         )
-        with mlflow.start_run(run_name=run_name):
-            mlflow.set_tags(self.mlflow_tags)
-            X = np.array(X).reshape(-1)
-            y = np.array(y).reshape(-1)
-            features = np.vstack([self._get_basis_function(x) for x in X])
 
-            tmp_file = DATA_FOLDER / "input_x.npy"
-            np.save(tmp_file, X)
-            mlflow.log_artifact(tmp_file.as_posix())
-            tmp_file.unlink()
-            tmp_file = DATA_FOLDER / "target.npy"
-            np.save(tmp_file, y)
-            mlflow.log_artifact(tmp_file.as_posix())
-            tmp_file.unlink()
-            tmp_file = DATA_FOLDER / "features.npy"
-            np.save(tmp_file, features)
-            mlflow.log_artifact(tmp_file.as_posix())
-            tmp_file.unlink()
+        tmp_file = DATA_FOLDER / f"coefficients{suffix}.npy"
+        np.save(tmp_file, self.model.coef_)
+        mlflow.log_artifact(tmp_file.as_posix())
+        tmp_file.unlink()
 
-            self.model = LinearRegression(fit_intercept=False)
-            self.model.fit(features, y)
-
-            model_info = mlflow.sklearn.log_model(
-                sk_model=self.model, name="fourier_coefficients"
-            )
-
-            tmp_file = DATA_FOLDER / "coefficients.npy"
-            np.save(tmp_file, self.model.coef_)
-            mlflow.log_artifact(tmp_file.as_posix())
-            tmp_file.unlink()
-
-            pred = self.model.predict(features)
-            mlflow.log_metric("mae", mean_absolute_error(y, pred))
-            mlflow.log_metric("rmse", root_mean_squared_error(y, pred))
+        pred = self.model.predict(features)
+        mlflow.log_metric("mae" + suffix, mean_absolute_error(y, pred))
+        mlflow.log_metric("rmse" + suffix, root_mean_squared_error(y, pred))
 
         return self
 
@@ -255,7 +249,8 @@ def fit_map_by_time(
     fitting_by_time = {}
     for coord in ["x", "y", "z"]:
         fitting_by_time[coord] = FourierFit(
-            max_degree, mlflow_tags={**mlflow_tags, "coordinate": coord}
+            max_degree,
+            suffix="-{}-{}".format(mlflow_tags.get("method"), coord),
         ).fit(encoding_by_time, df_position[f"coordinate_{coord}"])
     return fitting_by_time
 
@@ -289,7 +284,8 @@ def correct_fit_by_distance(
     fitting_by_distance = {}
     for i, coord in enumerate(["x", "y", "z"]):
         fitting_by_distance[coord] = FourierFit(
-            max_degree, mlflow_tags={**mlflow_tags, "coordinate": coord}
+            max_degree,
+            suffix="-{}-{}".format(mlflow_tags.get("method"), coord),
         ).fit(encoding_by_distance, data_by_time[:, i])
     return fitting_by_distance
 
@@ -422,17 +418,34 @@ def find_circuit_map(
             - data: Circuit map data
             - adjustment: Starting point adjustment
     """
-    fitting_by_time = fit_map_by_time(
-        df_position, max_degree, mlflow_tags={**mlflow_tags, "method": "time"}
-    )
-    fitting_by_distance = correct_fit_by_distance(
-        fitting_by_time,
-        max_degree,
-        predict_size,
-        mlflow_tags={**mlflow_tags, "method": "distance"},
-    )
-    start_encoding = adjust_starting_point(fitting_by_distance, df_position)
-    save = format_output(fitting_by_distance, predict_size, start_encoding)
+    with mlflow.start_run(run_name=mlflow_tags.get("run_id")):
+        mlflow.set_tags(mlflow_tags)
+        mlflow.log_param("max_degree", max_degree)
+        mlflow.log_param("predict_size", predict_size)
+
+        tmp_file = DATA_FOLDER / "features.parquet"
+        df_position.to_parquet(tmp_file)
+        mlflow.log_artifact(tmp_file.as_posix())
+        tmp_file.unlink()
+
+        fitting_by_time = fit_map_by_time(
+            df_position, max_degree, mlflow_tags={**mlflow_tags, "method": "time"}
+        )
+        fitting_by_distance = correct_fit_by_distance(
+            fitting_by_time,
+            max_degree,
+            predict_size,
+            mlflow_tags={**mlflow_tags, "method": "distance"},
+        )
+
+        start_encoding = adjust_starting_point(fitting_by_distance, df_position)
+        mlflow.log_metric("adjustment", start_encoding)
+
+        save = format_output(fitting_by_distance, predict_size, start_encoding)
+        tmp_file = DATA_FOLDER / "result.parquet"
+        save.to_parquet(tmp_file)
+        mlflow.log_artifact(tmp_file.as_posix())
+        tmp_file.unlink()
 
     return dict(
         fitting=fitting_by_distance,
