@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    image: formula_one_data_analysis
+    container_name: f1_analysis
+    volumes:
+      - ./data:/app/data
+      - ./mlruns:/app/mlruns
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  streamlit:
+    build: .
+    image: formula_one_data_visualization
+    container_name: f1_streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+    entrypoint: ["streamlit", "run"]
+    command: ["src/visualization_app/streamlit_app.py", "--server.address", "0.0.0.0"]
+    environment:
+      - PYTHONUNBUFFERED=1

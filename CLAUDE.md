@@ -35,61 +35,117 @@ Sessions use a three-part identifier: `(year, round_id, session_number)`
 
 ## Common Commands
 
+The application can be run either locally with Python or via Docker. For local Python execution, run commands from the project root. For Docker, the `data/` folder is mounted as a volume, and `cache/` is stored inside the container.
+
+### Docker Setup
+
+Build the Docker image:
+```bash
+docker build -t formula_one_data_analysis .
+```
+
+Or use Docker Compose:
+```bash
+docker-compose build
+```
+
 ### Data Download
 
-Download a specific event (all sessions):
+**Local:**
 ```bash
 python src/download_event.py <year> <round_id>
 ```
 
-Download a specific session:
+**Docker:**
 ```bash
-python src/download_event.py <year> <round_id> --session_id <session_number>
+docker run -v $(pwd)/data:/app/data formula_one_data_analysis src/download_event.py <year> <round_id>
 ```
 
-Examples:
+**Examples:**
 ```bash
+# Local
 python src/download_event.py 2026 R03              # Download all sessions for Round 3
 python src/download_event.py 2026 R03 --session_id 5  # Download only Race session
 python src/download_event.py 2026 T01              # Download testing event
+python src/download_event.py 2026 R03 --force      # Force re-download
+
+# Docker
+docker run -v $(pwd)/data:/app/data formula_one_data_analysis src/download_event.py 2026 R03
+docker run -v $(pwd)/data:/app/data formula_one_data_analysis src/download_event.py 2026 R03 --session_id 5
+docker run -v $(pwd)/data:/app/data formula_one_data_analysis src/download_event.py 2026 R03 --force
 ```
 
-Force re-download (ignore cache):
-```bash
-python src/download_event.py <year> <round_id> --force
-```
+**Download historical race schedule:**
 
-Download historical race schedule:
+Local:
 ```bash
 python src/download_history.py --year_start 1950 --year_end 2026
 ```
 
+Docker:
+```bash
+docker run -v $(pwd)/data:/app/data formula_one_data_analysis src/download_history.py --year_start 1950 --year_end 2026
+```
+
 ### Data Processing
 
-Update silver and gold layers for a specific year:
+**Update silver and gold layers for a specific year:**
+
+Local:
 ```bash
 python src/update_downstream_layers.py <year>
 ```
 
+Docker:
+```bash
+docker run -v $(pwd)/data:/app/data -v $(pwd)/mlruns:/app/mlruns formula_one_data_analysis src/update_downstream_layers.py <year>
+```
+
 ### Visualization
 
-Run the Streamlit visualization app:
+**Run the Streamlit visualization app:**
+
+Local:
 ```bash
 streamlit run src/visualization_app/streamlit_app.py
 ```
 
-The app must be run from the project root directory so it can access the `data/` folder.
+Docker:
+```bash
+docker run -p 8501:8501 -v $(pwd)/data:/app/data formula_one_data_analysis streamlit run src/visualization_app/streamlit_app.py --server.address 0.0.0.0
+```
+
+Or use Docker Compose:
+```bash
+docker-compose up streamlit
+```
+
+Access the app at http://localhost:8501
 
 ### Circuit Map Modeling
 
-Run circuit map modeling with MLflow tracking:
+**Run circuit map modeling with MLflow tracking:**
+
+Local:
 ```bash
 python src/run_circuit_map.py --year <year> --round_id <round_id> --session_id <session_id>
 ```
 
-Plot circuit map:
+Docker:
+```bash
+docker run -v $(pwd)/data:/app/data -v $(pwd)/mlruns:/app/mlruns formula_one_data_analysis src/run_circuit_map.py --year <year> --round_id <round_id> --session_id <session_id>
+```
+
+**Plot circuit map:**
+
+Local:
 ```bash
 python src/plot_circuit_map.py --year <year> --round_id <round_id> --session_id <session_id>
+```
+
+Docker:
+```bash
+docker run -v $(pwd)/data:/app/data formula_one_data_analysis src/plot_circuit_map.py --year <year> --round_id <round_id> --session_id <session_id>
 ```
 
 ## Project Structure
@@ -113,11 +169,15 @@ python src/plot_circuit_map.py --year <year> --round_id <round_id> --session_id 
 │   ├── run_circuit_map.py       # Circuit modeling with MLflow
 │   └── plot_circuit_map.py      # Circuit visualization
 ├── cache/                       # fastf1 cache (gitignored)
-├── data/                        # Parquet data files (gitignored)
+├── data/                        # Parquet data files (gitignored, mounted volume in Docker)
 │   ├── bronze/
 │   ├── silver/
 │   └── gold/
-└── mlruns/                      # MLflow tracking (gitignored)
+├── mlruns/                      # MLflow tracking (gitignored, optionally mounted)
+├── Dockerfile                   # Docker image definition
+├── docker-compose.yml           # Docker Compose configuration
+├── requirements.txt             # Python dependencies
+└── .dockerignore               # Files to exclude from Docker build
 ```
 
 ## Key Technologies
@@ -130,6 +190,17 @@ python src/plot_circuit_map.py --year <year> --round_id <round_id> --session_id 
 - **scikit-learn, scipy**: Circuit map fitting using Fourier series
 
 ## Important Notes
+
+### Docker Configuration
+
+The application is containerized with the following setup:
+- **Image name**: `formula_one_data_analysis`
+- **Cache folder**: Located at `/app/cache` inside the container (not mounted)
+- **Data folder**: Mounted as a volume from host `./data` to container `/app/data`
+- **MLflow**: Optionally mount `./mlruns` to persist experiment tracking data
+- **Streamlit**: Exposed on port 8501
+
+The cache folder stays inside the container to preserve fastf1's downloaded data across runs. If you need to clear the cache, rebuild the container or use `--force` flag when downloading data.
 
 ### fastf1 Cache
 
