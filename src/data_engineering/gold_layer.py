@@ -281,7 +281,7 @@ class SessionLaps(DatasetLocal):
         df["is_personal_best"] = df["IsPersonalBest"].fillna(False).astype(bool)
         df["track_status"] = df["TrackStatus"].apply(fix_integer)
         df["position"] = df["Position"].apply(fix_integer)
-        df["deleted_status"] = df["TrackStatus"].fillna(False).astype(bool)
+        df["deleted_status"] = df["Deleted"].fillna(False).astype(bool)
         df["deleted_reason"] = df["DeletedReason"].apply(fix_string)
         df["is_accurate"] = df["IsAccurate"].fillna(False).astype(bool)
         df["is_fastf1_generated"] = df["FastF1Generated"].fillna(False).astype(bool)
@@ -761,7 +761,7 @@ class SessionRaceControlMessages(DatasetLocal):
 class CircuitMarkers(DatasetLocal):
     def __init__(self, year):
         self.year = year
-        self.name = "gold/circuit_markers{:04d}".format(year)
+        self.name = "gold/circuit_markers_Y{:04d}".format(year)
 
     def run(self):
         dataset_source = DatasetLocal(name="silver/circuit_{:04d}*".format(self.year))
