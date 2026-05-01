@@ -23,3 +23,20 @@ services:
     command: ["src/visualization_app/streamlit_app.py", "--server.address", "0.0.0.0"]
     environment:
       - PYTHONUNBUFFERED=1
+
+  db:
+    image: postgres:15
+    container_name: f1_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: f1_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./src/init_pg_tables.sql:/docker-entrypoint-initdb.d/init_pg_tables.sql
+
+volumes:
+  pgdata:

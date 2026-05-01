@@ -4,6 +4,7 @@ data/
 drafts/
 **/.DS_Store
 mlruns/
+mlflow.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
