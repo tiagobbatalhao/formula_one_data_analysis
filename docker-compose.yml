@@ -26,14 +26,15 @@ services:
 
   db:
     image: postgres:15
-    container_name: f1_postgres
+    container_name: f1postgres
     restart: always
     environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: f1_database
+      POSTGRES_USER: f1user
+      POSTGRES_DB: f1database
+      POSTGRES_HOST_AUTH_METHOD: trust
+
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./src/init_pg_tables.sql:/docker-entrypoint-initdb.d/init_pg_tables.sql

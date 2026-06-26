@@ -1,0 +1,10 @@
+[project]
+name = "formula-one-data-analysis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.18.5",
+    "fastf1>=3.8.3",
+]
