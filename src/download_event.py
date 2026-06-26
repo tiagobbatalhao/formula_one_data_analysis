@@ -1,9 +1,8 @@
 import argparse
 from pathlib import Path
 
-import fastf1
-
 import data_engineering.bronze_layer as bronze_layer
+import fastf1
 
 cache_dir = Path(__file__).parent.parent / "cache"
 cache_dir.mkdir(parents=True, exist_ok=True)

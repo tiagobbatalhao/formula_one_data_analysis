@@ -3,14 +3,13 @@ import pathlib
 from typing import Any, Dict, List, Optional, Tuple, Union
 from uuid import uuid4
 
+import data_engineering.gold_layer as gold_layer
 import mlflow
 import numpy as np
 import pandas as pd
 import scipy.optimize
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, root_mean_squared_error
-
-import data_engineering.gold_layer as gold_layer
 
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("formula_one_circuit_map")

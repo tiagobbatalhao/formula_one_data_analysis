@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: formula_one_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=formula_one
+      - POSTGRES_PASSWORD=formula_one
+      - POSTGRES_DB=formula_one
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U formula_one -d formula_one"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:

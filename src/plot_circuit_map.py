@@ -1,11 +1,10 @@
 import argparse
 import pathlib
 
+import data_engineering.gold_layer as gold_layer
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-
-import data_engineering.gold_layer as gold_layer
 
 
 def rotate(array, angle_deg):
