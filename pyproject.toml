@@ -7,4 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.18.5",
     "fastf1>=3.8.3",
+    "loguru>=0.7.3",
+    "psycopg2>=2.9.12",
+    "psycopg[binary]>=3.3.4",
 ]
